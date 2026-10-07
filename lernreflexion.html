@@ -1,0 +1,273 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Reflexion">
+<title>Lernreflexionen</title>
+<style>
+:root{
+  --bg:#f5f6fa; --card:#ffffff; --text:#1d2433; --muted:#6b7385; --line:#dfe3ec;
+  --accent:#2b4a8b; --accent-soft:#e6ecf8; --ok:#2e7d4f; --ok-soft:#e3f3e9; --warn:#b5562c; --warn-soft:#fbeee6;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#13161d; --card:#1c212b; --text:#e8ebf2; --muted:#9aa2b4; --line:#2e3542;
+    --accent:#8fb0f0; --accent-soft:#25304a; --ok:#6fcf97; --ok-soft:#1f3329; --warn:#f0a07a; --warn-soft:#3a2a22;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#13161d; --card:#1c212b; --text:#e8ebf2; --muted:#9aa2b4; --line:#2e3542;
+  --accent:#8fb0f0; --accent-soft:#25304a; --ok:#6fcf97; --ok-soft:#1f3329; --warn:#f0a07a; --warn-soft:#3a2a22;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;line-height:1.4}
+.wrap{max-width:900px;margin:0 auto;padding:16px}
+header{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:8px;margin-bottom:16px}
+h1{font-size:1.5rem;margin:0}
+.today{color:var(--muted);font-size:.95rem}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px}
+.student{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px;text-align:left;cursor:pointer;font:inherit;color:inherit;display:flex;flex-direction:column;gap:4px;transition:transform .08s,border-color .15s}
+.student:active{transform:scale(.98)}
+.student.active{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-soft)}
+.student .name{font-weight:600}
+.student .meta{font-size:.85rem;color:var(--muted)}
+.badge{display:inline-block;font-size:.75rem;padding:2px 8px;border-radius:999px;margin-top:4px;width:fit-content}
+.badge.done{background:var(--ok-soft);color:var(--ok)}
+.badge.old{background:var(--warn-soft);color:var(--warn)}
+.badge.none{background:var(--accent-soft);color:var(--accent)}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;margin-top:18px}
+.panel h2{margin:0 0 4px;font-size:1.2rem}
+.panel .date{color:var(--muted);margin-bottom:12px}
+label{font-weight:600;display:block;margin:10px 0 6px}
+textarea{width:100%;min-height:160px;padding:10px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--text);font:inherit;resize:vertical}
+.row{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+button.btn{font:inherit;border-radius:10px;padding:10px 16px;border:1px solid var(--line);background:var(--card);color:var(--text);cursor:pointer}
+button.primary{background:var(--accent);border-color:var(--accent);color:var(--card);font-weight:600}
+button.danger{color:var(--warn);border-color:var(--warn)}
+.history{margin-top:18px}
+.entry{border-top:1px solid var(--line);padding:10px 0}
+.entry-head{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.entry-date{font-weight:600}
+.entry-text{white-space:pre-wrap;margin-top:4px}
+.entry button{font-size:.8rem;padding:4px 10px}
+.hint{color:var(--muted);font-size:.9rem}
+.tools{margin-top:28px;padding-top:14px;border-top:1px solid var(--line)}
+.toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:var(--text);color:var(--bg);padding:10px 16px;border-radius:10px;opacity:0;transition:opacity .2s;pointer-events:none}
+.toast.show{opacity:1}
+input[type=file]{display:none}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Lernreflexionen</h1>
+    <div class="today" id="today"></div>
+  </header>
+
+  <p class="hint">Schüler*in antippen → Ergebnisse &amp; Wochenvorhaben eintragen → speichern. Das Datum wird automatisch gesetzt.</p>
+
+  <div class="grid" id="grid"></div>
+
+  <div class="panel" id="panel" hidden>
+    <h2 id="pName"></h2>
+    <div class="date" id="pDate"></div>
+    <label for="txt">Ergebnisse &amp; Wochenvorhaben</label>
+    <textarea id="txt" placeholder="Was wurde erreicht? Was ist das Vorhaben für diese Woche?"></textarea>
+    <div class="row">
+      <button class="btn primary" id="save">Lernreflexion speichern</button>
+      <button class="btn" id="close">Schließen</button>
+    </div>
+    <div class="history" id="history"></div>
+  </div>
+
+  <div class="tools">
+    <div class="row">
+      <button class="btn" id="editNames">Namensliste bearbeiten</button>
+    </div>
+    <div id="namesBox" hidden>
+      <label for="namesTxt">Ein Name pro Zeile</label>
+      <textarea id="namesTxt"></textarea>
+      <div class="row">
+        <button class="btn primary" id="saveNames">Namensliste speichern</button>
+      </div>
+      <p class="hint">Die Namen werden nur auf diesem Gerät gespeichert und nicht ins Internet hochgeladen.</p>
+    </div>
+    <div class="row">
+      <button class="btn" id="exportJson">Sicherung exportieren (JSON)</button>
+      <button class="btn" id="importBtn">Sicherung importieren</button>
+      <button class="btn" id="exportCsv">Als Tabelle exportieren (CSV)</button>
+      <input type="file" id="importFile" accept="application/json,.json">
+    </div>
+    <p class="hint">Die Daten werden in diesem Browser auf diesem Gerät gespeichert. Exportiere regelmäßig eine Sicherung, z. B. bevor du den Browserverlauf löschst oder das Gerät wechselst.</p>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+const KEY = "lernreflexionen_v1";
+const KEY_NAMES = "lernreflexionen_klasse";
+let STUDENTS = [];
+function loadNames(){
+  try{ STUDENTS = JSON.parse(localStorage.getItem(KEY_NAMES)) || []; }catch(e){ STUDENTS = []; }
+}
+function saveNames(){
+  try{ localStorage.setItem(KEY_NAMES, JSON.stringify(STUDENTS)); }catch(e){}
+}
+let data = {};          // { name: [ {id, date (ISO), text} ] }
+let current = null;
+let editingId = null;
+
+function load(){
+  try{ data = JSON.parse(localStorage.getItem(KEY)) || {}; }catch(e){ data = {}; }
+}
+function persist(){
+  try{ localStorage.setItem(KEY, JSON.stringify(data)); return true; }
+  catch(e){ toast("Speichern im Browser nicht möglich – bitte Sicherung exportieren!"); return false; }
+}
+const fmt = iso => new Date(iso).toLocaleDateString("de-DE",{weekday:"short",day:"2-digit",month:"2-digit",year:"numeric"});
+const fmtLong = d => d.toLocaleDateString("de-DE",{weekday:"long",day:"2-digit",month:"long",year:"numeric"});
+const daysSince = iso => Math.floor((startOfDay(new Date()) - startOfDay(new Date(iso))) / 86400000);
+function startOfDay(d){ const x=new Date(d); x.setHours(0,0,0,0); return x; }
+function entries(n){ return (data[n]||[]).slice().sort((a,b)=>b.date.localeCompare(a.date)); }
+function esc(s){ return s.replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
+
+function toast(msg){
+  const t=document.getElementById("toast"); t.textContent=msg; t.classList.add("show");
+  clearTimeout(t._h); t._h=setTimeout(()=>t.classList.remove("show"),2200);
+}
+
+function renderGrid(){
+  const g=document.getElementById("grid"); g.innerHTML="";
+  if(!STUDENTS.length){
+    g.innerHTML='<p class="hint">Noch keine Namen eingetragen. Tippe unten auf „Namensliste bearbeiten“.</p>';
+    return;
+  }
+  STUDENTS.forEach(n=>{
+    const list=entries(n), last=list[0];
+    let badge;
+    if(!last) badge='<span class="badge none">noch keine</span>';
+    else{
+      const d=daysSince(last.date);
+      badge = d===0 ? '<span class="badge done">heute ✓</span>'
+            : d<7  ? `<span class="badge done">vor ${d} Tag${d>1?"en":""}</span>`
+                   : `<span class="badge old">vor ${d} Tagen</span>`;
+    }
+    const b=document.createElement("button");
+    b.className="student"+(n===current?" active":"");
+    b.innerHTML=`<span class="name">${esc(n)}</span>
+      <span class="meta">${list.length} Reflexion${list.length===1?"":"en"}${last?" · zuletzt "+fmt(last.date):""}</span>${badge}`;
+    b.onclick=()=>open(n);
+    g.appendChild(b);
+  });
+}
+
+function open(n){
+  current=n; editingId=null;
+  document.getElementById("panel").hidden=false;
+  document.getElementById("pName").textContent=n;
+  document.getElementById("pDate").textContent="Datum: "+fmtLong(new Date());
+  document.getElementById("txt").value="";
+  document.getElementById("save").textContent="Lernreflexion speichern";
+  renderGrid(); renderHistory();
+  document.getElementById("panel").scrollIntoView({behavior:"smooth",block:"start"});
+}
+
+function renderHistory(){
+  const h=document.getElementById("history"), list=entries(current);
+  if(!list.length){ h.innerHTML='<p class="hint">Noch keine Lernreflexionen gespeichert.</p>'; return; }
+  h.innerHTML="<label>Bisherige Reflexionen</label>"+list.map(e=>`
+    <div class="entry">
+      <div class="entry-head">
+        <span class="entry-date">${fmt(e.date)}</span>
+        <span>
+          <button class="btn" data-edit="${e.id}">Bearbeiten</button>
+          <button class="btn danger" data-del="${e.id}">Löschen</button>
+        </span>
+      </div>
+      <div class="entry-text">${e.text?esc(e.text):'<span class="hint">(kein Text)</span>'}</div>
+    </div>`).join("");
+  h.querySelectorAll("[data-del]").forEach(b=>b.onclick=()=>{
+    if(!confirm("Diesen Eintrag wirklich löschen?")) return;
+    data[current]=data[current].filter(e=>e.id!==b.dataset.del);
+    persist(); renderGrid(); renderHistory(); toast("Eintrag gelöscht");
+  });
+  h.querySelectorAll("[data-edit]").forEach(b=>b.onclick=()=>{
+    const e=data[current].find(x=>x.id===b.dataset.edit);
+    editingId=e.id;
+    document.getElementById("txt").value=e.text;
+    document.getElementById("pDate").textContent="Bearbeite Eintrag vom "+fmt(e.date);
+    document.getElementById("save").textContent="Änderung speichern";
+    document.getElementById("txt").focus();
+  });
+}
+
+document.getElementById("save").onclick=()=>{
+  if(!current) return;
+  const text=document.getElementById("txt").value.trim();
+  data[current]=data[current]||[];
+  if(editingId){
+    data[current].find(e=>e.id===editingId).text=text;
+    toast("Änderung gespeichert");
+  }else{
+    data[current].push({id:Date.now().toString(36)+Math.random().toString(36).slice(2,6), date:new Date().toISOString(), text});
+    toast("Lernreflexion für "+current.split(" ")[0]+" gespeichert");
+  }
+  persist(); open(current);
+};
+document.getElementById("close").onclick=()=>{
+  current=null; document.getElementById("panel").hidden=true; renderGrid();
+};
+
+function download(name, content, type){
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(new Blob([content],{type}));
+  a.download=name; document.body.appendChild(a); a.click(); a.remove();
+}
+const stamp=()=>new Date().toISOString().slice(0,10);
+document.getElementById("exportJson").onclick=()=>download(`lernreflexionen_${stamp()}.json`, JSON.stringify({klasse:STUDENTS, eintraege:data},null,2), "application/json");
+document.getElementById("editNames").onclick=()=>{
+  const box=document.getElementById("namesBox");
+  box.hidden=!box.hidden;
+  document.getElementById("namesTxt").value=STUDENTS.join("\n");
+};
+document.getElementById("saveNames").onclick=()=>{
+  STUDENTS=document.getElementById("namesTxt").value.split("\n").map(s=>s.trim()).filter(Boolean);
+  saveNames(); document.getElementById("namesBox").hidden=true; renderGrid();
+  toast(STUDENTS.length+" Namen gespeichert");
+};
+document.getElementById("exportCsv").onclick=()=>{
+  const q=s=>'"'+String(s).replace(/"/g,'""')+'"';
+  const rows=[["Name","Datum","Ergebnisse & Wochenvorhaben"]];
+  STUDENTS.forEach(n=>entries(n).reverse().forEach(e=>rows.push([n,new Date(e.date).toLocaleDateString("de-DE"),e.text])));
+  download(`lernreflexionen_${stamp()}.csv`, "\ufeff"+rows.map(r=>r.map(q).join(";")).join("\n"), "text/csv");
+};
+document.getElementById("importBtn").onclick=()=>document.getElementById("importFile").click();
+document.getElementById("importFile").onchange=ev=>{
+  const f=ev.target.files[0]; if(!f) return;
+  const r=new FileReader();
+  r.onload=()=>{
+    try{
+      const raw=JSON.parse(r.result); let added=0;
+      const imp = raw.eintraege || raw;
+      const names = raw.klasse || Object.keys(imp);
+      names.forEach(n=>{ if(!STUDENTS.includes(n)) STUDENTS.push(n); });
+      saveNames();
+      Object.keys(imp).forEach(n=>{
+        data[n]=data[n]||[];
+        const ids=new Set(data[n].map(e=>e.id));
+        imp[n].forEach(e=>{ if(!ids.has(e.id)){ data[n].push(e); added++; } });
+      });
+      persist(); renderGrid(); if(current) renderHistory();
+      toast(added+" Einträge importiert");
+    }catch(e){ toast("Datei konnte nicht gelesen werden"); }
+  };
+  r.readAsText(f); ev.target.value="";
+};
+
+document.getElementById("today").textContent=fmtLong(new Date());
+load(); loadNames(); renderGrid();
+</script>
+</body>
+</html>
